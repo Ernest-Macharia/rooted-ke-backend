@@ -28,7 +28,9 @@ class PackageImage(models.Model):
 class Package(models.Model):
     name = models.CharField(max_length=200)
     slug = models.SlugField(unique=True, blank=True)
+    tagline = models.CharField(max_length=255, blank=True)
     description = models.TextField()
+    overview = models.TextField(blank=True)
     category = models.ForeignKey(
         PackageCategory,
         related_name='packages',
@@ -48,6 +50,16 @@ class Package(models.Model):
     excludes = models.TextField(blank=True)
     itinerary = models.TextField(blank=True)
     image = models.ImageField(upload_to='packages/', null=True, blank=True)
+    hero_image_url = models.URLField(blank=True)
+    card_image_url = models.URLField(blank=True)
+    icon = models.CharField(max_length=20, blank=True)
+    duration = models.CharField(max_length=120, blank=True)
+    best_for = models.JSONField(default=list, blank=True)
+    inclusions = models.JSONField(default=list, blank=True)
+    exclusions = models.JSONField(default=list, blank=True)
+    tiers = models.JSONField(default=list, blank=True)
+    destination_labels = models.JSONField(default=list, blank=True)
+    gallery_urls = models.JSONField(default=list, blank=True)
     gallery = models.ManyToManyField(
         PackageImage,
         related_name='packages',

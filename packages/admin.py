@@ -14,21 +14,24 @@ class PackageCategoryAdmin(admin.ModelAdmin):
 class PackageAdmin(admin.ModelAdmin):
     list_display = ['name', 'category', 'duration_days', 'price', 'discount_price', 'is_featured']
     list_filter = ['category', 'destinations', 'is_featured', 'duration_days']
-    search_fields = ['name', 'description']
+    search_fields = ['name', 'tagline', 'description', 'overview']
     prepopulated_fields = {'slug': ['name']}
     filter_horizontal = ['destinations', 'gallery']
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'slug', 'description', 'category', 'image')
+            'fields': ('name', 'slug', 'tagline', 'description', 'overview', 'category', 'icon', 'image', 'card_image_url', 'hero_image_url')
         }),
         ('Duration', {
-            'fields': ('duration_days', 'duration_nights')
+            'fields': ('duration_days', 'duration_nights', 'duration')
         }),
         ('Pricing', {
             'fields': ('price', 'discount_price')
         }),
         ('Content', {
-            'fields': ('includes', 'excludes', 'itinerary')
+            'fields': ('includes', 'excludes', 'itinerary', 'best_for', 'inclusions', 'exclusions', 'tiers')
+        }),
+        ('Frontend Lists', {
+            'fields': ('destination_labels', 'gallery_urls')
         }),
         ('Featured', {
             'fields': ('is_featured',)
