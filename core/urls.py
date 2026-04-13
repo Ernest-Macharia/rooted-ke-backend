@@ -6,6 +6,10 @@ from .api import (
     trending_data,
     frontend_bootstrap,
     legal_pages,
+    page_detail,
+    about_page,
+    privacy_policy_page,
+    terms_of_service_page,
     ContentBlockViewSet,
     SitePageViewSet,
 )
@@ -19,5 +23,9 @@ urlpatterns = [
     path('trending/', trending_data, name='trending'),
     path('frontend-bootstrap/', frontend_bootstrap, name='frontend-bootstrap'),
     path('legal-pages/', legal_pages, name='legal-pages'),
+    path('pages/about/', about_page, name='about-page'),
+    path('pages/privacy-policy/', privacy_policy_page, name='privacy-policy-page'),
+    path('pages/terms-of-service/', terms_of_service_page, name='terms-of-service-page'),
+    path('pages/<slug:slug>/', page_detail, name='page-detail'),
     path('', include(router.urls)),
 ]

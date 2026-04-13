@@ -62,11 +62,11 @@ class RestaurantSerializer(serializers.ModelSerializer):
         return round(avg, 2) if avg else obj.rating
 
     def get_img(self, obj):
-        if obj.image_url:
-            return obj.image_url
         if obj.image:
             request = self.context.get('request')
             return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        if obj.image_url:
+            return obj.image_url
         return None
 
     def get_budget(self, obj):

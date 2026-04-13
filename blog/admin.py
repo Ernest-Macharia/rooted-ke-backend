@@ -19,7 +19,7 @@ class BlogPostAdmin(admin.ModelAdmin):
             'fields': ('title', 'slug', 'excerpt', 'content', 'body', 'featured_image', 'image_url')
         }),
         ('Metadata', {
-            'fields': ('author', 'author_avatar_url', 'category', 'destination', 'tags', 'related_slugs')
+            'fields': ('author', 'author_avatar', 'author_avatar_url', 'category', 'destination', 'tags', 'related_slugs')
         }),
         ('Frontend Display', {
             'fields': ('date_display', 'read_time')

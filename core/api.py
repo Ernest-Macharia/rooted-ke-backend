@@ -8,7 +8,22 @@ from restaurants.models import Restaurant
 from events.models import Event
 from packages.models import Package
 from blog.models import BlogPost
-from .models import ContentBlock, SitePage
+from .models import ContentBlock, SitePage, HomePageSettings, HomePageFeatureItem
+
+
+def _page_payload(page):
+    return {
+        'title': page.title,
+        'summary': page.summary,
+        'body': page.body,
+        'section_1_heading': page.section_1_heading,
+        'section_1_body': page.section_1_body,
+        'section_2_heading': page.section_2_heading,
+        'section_2_body': page.section_2_body,
+        'section_3_heading': page.section_3_heading,
+        'section_3_body': page.section_3_body,
+        'updated_at': page.updated_at,
+    }
 
 
 class ContentBlockSerializer(serializers.ModelSerializer):
@@ -30,7 +45,106 @@ class ContentBlockViewSet(viewsets.ReadOnlyModelViewSet):
 class SitePageSerializer(serializers.ModelSerializer):
     class Meta:
         model = SitePage
-        fields = ['id', 'slug', 'title', 'summary', 'body', 'content', 'is_published', 'updated_at']
+        fields = [
+            'id', 'slug', 'title', 'summary', 'body',
+            'section_1_heading', 'section_1_body',
+            'section_2_heading', 'section_2_body',
+            'section_3_heading', 'section_3_body',
+            'is_published', 'updated_at',
+        ]
+
+
+class HomePageSettingsSerializer(serializers.ModelSerializer):
+    hero_background_image_src = serializers.SerializerMethodField()
+    destinations_fallback_card_image_src = serializers.SerializerMethodField()
+    top_primary_items = serializers.SerializerMethodField()
+    top_secondary_items = serializers.SerializerMethodField()
+    trending_items = serializers.SerializerMethodField()
+
+    class Meta:
+        model = HomePageSettings
+        fields = [
+            'hero_eyebrow',
+            'hero_title',
+            'hero_subtitle',
+            'hero_description',
+            'hero_background_image_src',
+            'hero_background_image_url',
+            'destinations_eyebrow',
+            'destinations_title',
+            'destinations_subtitle',
+            'destinations_fallback_card_image_src',
+            'destinations_fallback_card_image_url',
+            'top_categories_eyebrow',
+            'top_categories_title',
+            'trending_eyebrow',
+            'trending_title',
+            'trending_subtitle',
+            'restaurants_eyebrow',
+            'restaurants_title',
+            'restaurants_subtitle',
+            'events_eyebrow',
+            'events_title',
+            'events_subtitle',
+            'packages_eyebrow',
+            'packages_title',
+            'packages_title_emphasis',
+            'packages_subtitle',
+            'blog_eyebrow',
+            'blog_title',
+            'blog_subtitle',
+            'blog_cta_label',
+            'newsletter_eyebrow',
+            'newsletter_title',
+            'newsletter_subtitle',
+            'newsletter_description',
+            'newsletter_disclaimer',
+            'newsletter_button_label',
+            'newsletter_success_message',
+            'top_primary_items',
+            'top_secondary_items',
+            'trending_items',
+            'updated_at',
+        ]
+
+    def _absolute_media_url(self, file_field):
+        if not file_field:
+            return ''
+        request = self.context.get('request')
+        return request.build_absolute_uri(file_field.url) if request else file_field.url
+
+    def get_hero_background_image_src(self, obj):
+        return self._absolute_media_url(obj.hero_background_image)
+
+    def get_destinations_fallback_card_image_src(self, obj):
+        return self._absolute_media_url(obj.destinations_fallback_card_image)
+
+    def _serialize_items(self, obj, section):
+        queryset = obj.feature_items.filter(section=section, is_active=True).order_by('sort_order', 'id')
+        return HomePageFeatureItemSerializer(queryset, many=True, context=self.context).data
+
+    def get_top_primary_items(self, obj):
+        return self._serialize_items(obj, 'top_primary')
+
+    def get_top_secondary_items(self, obj):
+        return self._serialize_items(obj, 'top_secondary')
+
+    def get_trending_items(self, obj):
+        return self._serialize_items(obj, 'trending')
+
+
+class HomePageFeatureItemSerializer(serializers.ModelSerializer):
+    img = serializers.SerializerMethodField()
+
+    class Meta:
+        model = HomePageFeatureItem
+        fields = ['title', 'subtitle', 'cta_label', 'img', 'image_url', 'sort_order']
+
+    def get_img(self, obj):
+        if obj.image:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        return obj.image_url
 
 
 class SitePageViewSet(viewsets.ReadOnlyModelViewSet):
@@ -53,13 +167,18 @@ def homepage_data(request):
     latest_posts = BlogPost.objects.filter(is_published=True)[:3]
     popular_packages = Package.objects.filter(is_featured=True)[:8]
 
+    homepage_settings = HomePageSettings.objects.filter(is_active=True).first()
     homepage_block = ContentBlock.objects.filter(key='homepage', is_active=True).first()
     nav_block = ContentBlock.objects.filter(key='navigation', is_active=True).first()
     footer_block = ContentBlock.objects.filter(key='footer', is_active=True).first()
 
     data = {
         'cms': {
-            'homepage': homepage_block.content if homepage_block else {},
+            'homepage': (
+                HomePageSettingsSerializer(homepage_settings, context={'request': request}).data
+                if homepage_settings
+                else (homepage_block.content if homepage_block else {})
+            ),
             'navigation': nav_block.content if nav_block else {},
             'footer': footer_block.content if footer_block else {},
         },
@@ -93,13 +212,7 @@ def frontend_bootstrap(request):
     return Response({
         'content_blocks': {item.key: item.content for item in blocks},
         'site_pages': {
-            page.slug: {
-                'title': page.title,
-                'summary': page.summary,
-                'body': page.body,
-                'content': page.content,
-                'updated_at': page.updated_at,
-            }
+            page.slug: _page_payload(page)
             for page in pages
         }
     })
@@ -110,15 +223,41 @@ def legal_pages(request):
     legal_slugs = ['privacy-policy', 'terms-of-service']
     pages = SitePage.objects.filter(is_published=True, slug__in=legal_slugs)
     return Response({
-        page.slug: {
-            'title': page.title,
-            'summary': page.summary,
-            'body': page.body,
-            'content': page.content,
-            'updated_at': page.updated_at,
-        }
+        page.slug: _page_payload(page)
         for page in pages
     })
+
+
+@api_view(['GET'])
+def page_detail(request, slug):
+    page = SitePage.objects.filter(is_published=True, slug=slug).first()
+    if not page:
+        return Response({'detail': 'Not found.'}, status=404)
+    return Response(SitePageSerializer(page, context={'request': request}).data)
+
+
+@api_view(['GET'])
+def about_page(request):
+    page = SitePage.objects.filter(is_published=True, slug='about').first()
+    if not page:
+        return Response({'detail': 'Not found.'}, status=404)
+    return Response(SitePageSerializer(page, context={'request': request}).data)
+
+
+@api_view(['GET'])
+def privacy_policy_page(request):
+    page = SitePage.objects.filter(is_published=True, slug='privacy-policy').first()
+    if not page:
+        return Response({'detail': 'Not found.'}, status=404)
+    return Response(SitePageSerializer(page, context={'request': request}).data)
+
+
+@api_view(['GET'])
+def terms_of_service_page(request):
+    page = SitePage.objects.filter(is_published=True, slug='terms-of-service').first()
+    if not page:
+        return Response({'detail': 'Not found.'}, status=404)
+    return Response(SitePageSerializer(page, context={'request': request}).data)
 
 
 # Import serializers from other apps

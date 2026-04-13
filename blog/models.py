@@ -22,6 +22,7 @@ class BlogPost(models.Model):
     featured_image = models.ImageField(upload_to='blog/')
     image_url = models.URLField(blank=True)
     author = models.CharField(max_length=100)
+    author_avatar = models.ImageField(upload_to='blog/authors/', null=True, blank=True)
     author_avatar_url = models.URLField(blank=True)
     date_display = models.CharField(max_length=80, blank=True)
     read_time = models.CharField(max_length=40, blank=True)

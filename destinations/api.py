@@ -65,6 +65,9 @@ class DestinationSerializer(serializers.ModelSerializer):
         return None
 
     def get_img(self, obj):
+        if obj.card_image:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.card_image.url) if request else obj.card_image.url
         if obj.card_image_url:
             return obj.card_image_url
         primary = obj.images.filter(is_primary=True).first() or obj.images.first()
@@ -78,6 +81,9 @@ class DestinationSerializer(serializers.ModelSerializer):
         return None
 
     def get_heroImg(self, obj):
+        if obj.hero_image:
+            request = self.context.get('request')
+            return request.build_absolute_uri(obj.hero_image.url) if request else obj.hero_image.url
         if obj.hero_image_url:
             return obj.hero_image_url
         return self.get_img(obj)
@@ -85,6 +91,7 @@ class DestinationSerializer(serializers.ModelSerializer):
     def get_restaurants(self, obj):
         # Lazy import to avoid circular dependency at import time.
         from restaurants.models import Restaurant
+        request = self.context.get('request')
 
         queryset = (
             Restaurant.objects
@@ -101,7 +108,11 @@ class DestinationSerializer(serializers.ModelSerializer):
                 'area': restaurant.area or obj.location,
                 'cuisine': cuisine_name,
                 'budget': restaurant.budget_label or restaurant.get_budget_tier_display().split(' ')[0],
-                'img': restaurant.image_url,
+                'img': (
+                    request.build_absolute_uri(restaurant.image.url)
+                    if restaurant.image and request
+                    else (restaurant.image.url if restaurant.image else restaurant.image_url)
+                ),
             })
 
         return DestinationRestaurantLiteSerializer(data, many=True).data

@@ -67,17 +67,21 @@ class BlogPostSerializer(serializers.ModelSerializer):
         return ''
 
     def get_img(self, obj):
-        if obj.image_url:
-            return obj.image_url
         if obj.featured_image:
             request = self.context.get('request')
             return request.build_absolute_uri(obj.featured_image.url) if request else obj.featured_image.url
+        if obj.image_url:
+            return obj.image_url
         return None
 
     def get_authorObj(self, obj):
+        avatar = obj.author_avatar_url
+        if obj.author_avatar:
+            request = self.context.get('request')
+            avatar = request.build_absolute_uri(obj.author_avatar.url) if request else obj.author_avatar.url
         return {
             'name': obj.author,
-            'avatar': obj.author_avatar_url,
+            'avatar': avatar,
         }
 
 

@@ -12,6 +12,7 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -33,6 +34,17 @@ INSTALLED_APPS = [
     'restaurants',
     'core'
 ]
+
+JAZZMIN_SETTINGS = {
+    "site_title": "Rooted Kenya Admin",
+    "site_header": "Rooted Kenya",
+    "site_brand": "Rooted Kenya",
+    "site_logo_classes": "img-circle",
+    "welcome_sign": "Welcome to Rooted Kenya Admin",
+    "copyright": "Rooted Kenya",
+    "show_sidebar": True,
+    "navigation_expanded": True,
+}
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',

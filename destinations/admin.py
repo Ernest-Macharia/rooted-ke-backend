@@ -17,7 +17,7 @@ class DestinationAdmin(admin.ModelAdmin):
             'fields': ('name', 'slug', 'short', 'description', 'overview', 'location')
         }),
         ('Frontend Content', {
-            'fields': ('card_image_url', 'hero_image_url', 'highlights', 'things_to_do', 'display_tags', 'package_link', 'hotel_search')
+            'fields': ('card_image', 'card_image_url', 'hero_image', 'hero_image_url', 'highlights', 'things_to_do', 'display_tags', 'package_link', 'hotel_search')
         }),
         ('Location Details', {
             'fields': ('latitude', 'longitude')

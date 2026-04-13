@@ -55,11 +55,11 @@ class EventSerializer(serializers.ModelSerializer):
         return str(obj.price) if obj.price is not None else ''
 
     def get_img(self, obj):
-        if obj.image_url:
-            return obj.image_url
         if obj.image:
             request = self.context.get('request')
             return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        if obj.image_url:
+            return obj.image_url
         return None
 
 

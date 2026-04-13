@@ -75,15 +75,17 @@ class PackageSerializer(serializers.ModelSerializer):
         return obj.discount_price if obj.discount_price else obj.price
 
     def get_img(self, obj):
-        if obj.card_image_url:
-            return obj.card_image_url
         if obj.image:
             request = self.context.get('request')
             return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        if obj.card_image_url:
+            return obj.card_image_url
         return None
 
     def get_heroImg(self, obj):
-        return obj.hero_image_url or self.get_img(obj)
+        if obj.hero_image_url:
+            return obj.hero_image_url
+        return self.get_img(obj)
 
     def get_categoryLabel(self, obj):
         return obj.category.name if obj.category else ''
