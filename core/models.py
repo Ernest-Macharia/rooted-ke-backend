@@ -1,6 +1,25 @@
 from django.db import models
 
 
+class MediaAsset(models.Model):
+    title = models.CharField(max_length=200)
+    image = models.ImageField(upload_to='media-library/', blank=True, null=True)
+    image_url = models.URLField(blank=True)
+    alt_text = models.CharField(max_length=255, blank=True)
+    tags = models.CharField(max_length=255, blank=True, help_text='Comma-separated tags')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['title', '-created_at']
+        verbose_name = 'Media Asset'
+        verbose_name_plural = 'Media Library'
+
+    def __str__(self):
+        return self.title
+
+
 class ContentBlock(models.Model):
     """
     Generic CMS block for frontend-managed content.

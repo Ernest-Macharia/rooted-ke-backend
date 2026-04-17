@@ -1,5 +1,92 @@
-from django.contrib import admin
-from .models import ContentBlock, SitePage, HomePageSettings, HomePageFeatureItem
+from pathlib import Path
+
+from django import forms
+from django.contrib import admin, messages
+from django.shortcuts import redirect, render
+from django.urls import path, reverse
+from .models import ContentBlock, SitePage, HomePageSettings, HomePageFeatureItem, MediaAsset
+
+
+class MediaAssetBulkUploadForm(forms.Form):
+    class MultiFileInput(forms.ClearableFileInput):
+        allow_multiple_selected = True
+
+    files = forms.FileField(
+        label='Images',
+        widget=MultiFileInput(),
+        help_text='Select multiple image files to upload in one go.',
+    )
+    default_tags = forms.CharField(
+        required=False,
+        help_text='Optional comma-separated tags applied to all uploaded files.',
+    )
+    is_active = forms.BooleanField(required=False, initial=True)
+
+
+@admin.register(MediaAsset)
+class MediaAssetAdmin(admin.ModelAdmin):
+    list_display = ['title', 'is_active', 'created_at', 'updated_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['title', 'alt_text', 'tags', 'image_url']
+    readonly_fields = ['created_at', 'updated_at']
+    change_list_template = 'admin/core/mediaasset/change_list.html'
+    fieldsets = (
+        ('Asset', {
+            'fields': ('title', 'image', 'image_url', 'alt_text', 'tags', 'is_active')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'bulk-upload/',
+                self.admin_site.admin_view(self.bulk_upload_view),
+                name='core_mediaasset_bulk_upload',
+            ),
+        ]
+        return custom_urls + urls
+
+    def bulk_upload_view(self, request):
+        form = MediaAssetBulkUploadForm(request.POST or None, request.FILES or None)
+
+        if request.method == 'POST' and form.is_valid():
+            uploaded_files = request.FILES.getlist('files')
+            if not uploaded_files:
+                form.add_error('files', 'Please choose at least one file.')
+            else:
+                created = 0
+                default_tags = form.cleaned_data.get('default_tags', '').strip()
+                is_active = form.cleaned_data.get('is_active', True)
+
+                for uploaded_file in uploaded_files:
+                    title = Path(uploaded_file.name).stem.replace('_', ' ').replace('-', ' ').strip()
+                    asset = MediaAsset(
+                        title=title or uploaded_file.name,
+                        tags=default_tags,
+                        is_active=is_active,
+                    )
+                    asset.image = uploaded_file
+                    asset.save()
+                    created += 1
+
+                self.message_user(
+                    request,
+                    f'Successfully uploaded {created} media asset(s).',
+                    level=messages.SUCCESS,
+                )
+                return redirect(reverse('admin:core_mediaasset_changelist'))
+
+        context = {
+            **self.admin_site.each_context(request),
+            'opts': self.model._meta,
+            'title': 'Bulk Upload Media Assets',
+            'form': form,
+        }
+        return render(request, 'admin/core/mediaasset/bulk_upload.html', context)
 
 
 @admin.register(ContentBlock)

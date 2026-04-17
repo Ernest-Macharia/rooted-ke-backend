@@ -17,6 +17,12 @@ class DestinationImageSerializer(serializers.ModelSerializer):
         if obj.image:
             request = self.context.get('request')
             return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        if obj.media_asset:
+            if obj.media_asset.image:
+                request = self.context.get('request')
+                return request.build_absolute_uri(obj.media_asset.image.url) if request else obj.media_asset.image.url
+            if obj.media_asset.image_url:
+                return obj.media_asset.image_url
         return None
 
 
@@ -58,6 +64,24 @@ class DestinationSerializer(serializers.ModelSerializer):
             'things', 'hotelSearch', 'created_at', 'updated_at'
         ]
 
+    def _media_asset_url(self, asset):
+        if not asset:
+            return None
+        request = self.context.get('request')
+        if asset.image:
+            return request.build_absolute_uri(asset.image.url) if request else asset.image.url
+        if asset.image_url:
+            return asset.image_url
+        return None
+
+    def _restaurant_image_url(self, restaurant):
+        request = self.context.get('request')
+        if restaurant.image:
+            return request.build_absolute_uri(restaurant.image.url) if request else restaurant.image.url
+        if restaurant.image_url:
+            return restaurant.image_url
+        return self._media_asset_url(restaurant.media_asset)
+
     def get_primary_image(self, obj):
         primary = obj.images.filter(is_primary=True).first()
         if primary:
@@ -70,6 +94,10 @@ class DestinationSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.card_image.url) if request else obj.card_image.url
         if obj.card_image_url:
             return obj.card_image_url
+        if obj.card_media_asset:
+            media_url = self._media_asset_url(obj.card_media_asset)
+            if media_url:
+                return media_url
         primary = obj.images.filter(is_primary=True).first() or obj.images.first()
         if not primary:
             return None
@@ -86,17 +114,21 @@ class DestinationSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.hero_image.url) if request else obj.hero_image.url
         if obj.hero_image_url:
             return obj.hero_image_url
+        if obj.hero_media_asset:
+            media_url = self._media_asset_url(obj.hero_media_asset)
+            if media_url:
+                return media_url
         return self.get_img(obj)
 
     def get_restaurants(self, obj):
         # Lazy import to avoid circular dependency at import time.
         from restaurants.models import Restaurant
-        request = self.context.get('request')
 
         queryset = (
             Restaurant.objects
             .filter(destination=obj)
             .prefetch_related('cuisine')
+            .select_related('media_asset')
             .order_by('-is_featured', '-rating', 'name')[:5]
         )
 
@@ -108,11 +140,7 @@ class DestinationSerializer(serializers.ModelSerializer):
                 'area': restaurant.area or obj.location,
                 'cuisine': cuisine_name,
                 'budget': restaurant.budget_label or restaurant.get_budget_tier_display().split(' ')[0],
-                'img': (
-                    request.build_absolute_uri(restaurant.image.url)
-                    if restaurant.image and request
-                    else (restaurant.image.url if restaurant.image else restaurant.image_url)
-                ),
+                'img': self._restaurant_image_url(restaurant),
             })
 
         return DestinationRestaurantLiteSerializer(data, many=True).data
@@ -130,4 +158,4 @@ class DestinationViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.prefetch_related('images', 'tags')
+        return queryset.prefetch_related('images__media_asset', 'tags').select_related('card_media_asset', 'hero_media_asset')

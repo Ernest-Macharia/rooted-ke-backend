@@ -10,8 +10,10 @@ class Destination(models.Model):
     location = models.CharField(max_length=300)
     card_image = models.ImageField(upload_to='destinations/cards/', null=True, blank=True)
     card_image_url = models.URLField(blank=True)
+    card_media_asset = models.ForeignKey('core.MediaAsset', null=True, blank=True, on_delete=models.SET_NULL, related_name='destination_card_items')
     hero_image = models.ImageField(upload_to='destinations/heroes/', null=True, blank=True)
     hero_image_url = models.URLField(blank=True)
+    hero_media_asset = models.ForeignKey('core.MediaAsset', null=True, blank=True, on_delete=models.SET_NULL, related_name='destination_hero_items')
     latitude = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
     price_from = models.DecimalField(max_digits=10, decimal_places=2)
@@ -40,6 +42,7 @@ class DestinationImage(models.Model):
     destination = models.ForeignKey(Destination, related_name='images', on_delete=models.CASCADE)
     image = models.ImageField(upload_to='destinations/')
     image_url = models.URLField(blank=True)
+    media_asset = models.ForeignKey('core.MediaAsset', null=True, blank=True, on_delete=models.SET_NULL, related_name='destination_images')
     is_primary = models.BooleanField(default=False)
     alt_text = models.CharField(max_length=200, blank=True)
     

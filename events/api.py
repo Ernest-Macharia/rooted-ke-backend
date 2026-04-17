@@ -60,7 +60,26 @@ class EventSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.image.url) if request else obj.image.url
         if obj.image_url:
             return obj.image_url
+        if obj.media_asset:
+            if obj.media_asset.image:
+                request = self.context.get('request')
+                return request.build_absolute_uri(obj.media_asset.image.url) if request else obj.media_asset.image.url
+            if obj.media_asset.image_url:
+                return obj.media_asset.image_url
         return None
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not data.get('gallery') and instance.gallery_assets.exists():
+            request = self.context.get('request')
+            gallery_urls = []
+            for asset in instance.gallery_assets.all():
+                if asset.image:
+                    gallery_urls.append(request.build_absolute_uri(asset.image.url) if request else asset.image.url)
+                elif asset.image_url:
+                    gallery_urls.append(asset.image_url)
+            data['gallery'] = gallery_urls
+        return data
 
 
 class EventBookingSerializer(serializers.ModelSerializer):
@@ -71,7 +90,7 @@ class EventBookingSerializer(serializers.ModelSerializer):
 
 
 class EventViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Event.objects.select_related('destination').all()
+    queryset = Event.objects.select_related('destination', 'media_asset').prefetch_related('gallery_assets').all()
     serializer_class = EventSerializer
     lookup_field = 'slug'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]

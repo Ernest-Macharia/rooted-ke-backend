@@ -1,6 +1,7 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers, viewsets, filters, status
 from rest_framework.decorators import action, api_view
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from .models import BlogPost, BlogCategory, BlogComment
@@ -72,6 +73,12 @@ class BlogPostSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.featured_image.url) if request else obj.featured_image.url
         if obj.image_url:
             return obj.image_url
+        if obj.featured_media_asset:
+            if obj.featured_media_asset.image:
+                request = self.context.get('request')
+                return request.build_absolute_uri(obj.featured_media_asset.image.url) if request else obj.featured_media_asset.image.url
+            if obj.featured_media_asset.image_url:
+                return obj.featured_media_asset.image_url
         return None
 
     def get_authorObj(self, obj):
@@ -79,6 +86,12 @@ class BlogPostSerializer(serializers.ModelSerializer):
         if obj.author_avatar:
             request = self.context.get('request')
             avatar = request.build_absolute_uri(obj.author_avatar.url) if request else obj.author_avatar.url
+        elif obj.author_avatar_media_asset:
+            request = self.context.get('request')
+            if obj.author_avatar_media_asset.image:
+                avatar = request.build_absolute_uri(obj.author_avatar_media_asset.image.url) if request else obj.author_avatar_media_asset.image.url
+            elif obj.author_avatar_media_asset.image_url:
+                avatar = obj.author_avatar_media_asset.image_url
         return {
             'name': obj.author,
             'avatar': avatar,
@@ -86,7 +99,9 @@ class BlogPostSerializer(serializers.ModelSerializer):
 
 
 class BlogPostViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = BlogPost.objects.filter(is_published=True).select_related('category', 'destination')
+    queryset = BlogPost.objects.filter(is_published=True).select_related(
+        'category', 'destination', 'featured_media_asset', 'author_avatar_media_asset'
+    )
     serializer_class = BlogPostSerializer
     lookup_field = 'slug'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -94,6 +109,10 @@ class BlogPostViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['title', 'content', 'excerpt', 'author']
     ordering_fields = ['published_at', 'views', 'title']
     ordering = ['-published_at']
+
+    def get_permissions(self):
+        # Keep blog browsing public and allow public comment submissions.
+        return [AllowAny()]
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()

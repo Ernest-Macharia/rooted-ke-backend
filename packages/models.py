@@ -50,8 +50,11 @@ class Package(models.Model):
     excludes = models.TextField(blank=True)
     itinerary = models.TextField(blank=True)
     image = models.ImageField(upload_to='packages/', null=True, blank=True)
+    image_media_asset = models.ForeignKey('core.MediaAsset', null=True, blank=True, on_delete=models.SET_NULL, related_name='packages')
     hero_image_url = models.URLField(blank=True)
+    hero_media_asset = models.ForeignKey('core.MediaAsset', null=True, blank=True, on_delete=models.SET_NULL, related_name='package_hero_items')
     card_image_url = models.URLField(blank=True)
+    card_media_asset = models.ForeignKey('core.MediaAsset', null=True, blank=True, on_delete=models.SET_NULL, related_name='package_card_items')
     icon = models.CharField(max_length=20, blank=True)
     duration = models.CharField(max_length=120, blank=True)
     best_for = models.JSONField(default=list, blank=True)
@@ -63,6 +66,11 @@ class Package(models.Model):
     gallery = models.ManyToManyField(
         PackageImage,
         related_name='packages',
+        blank=True,
+    )
+    gallery_assets = models.ManyToManyField(
+        'core.MediaAsset',
+        related_name='package_galleries',
         blank=True,
     )
     is_featured = models.BooleanField(default=False)

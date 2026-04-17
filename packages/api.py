@@ -78,11 +78,29 @@ class PackageSerializer(serializers.ModelSerializer):
         if obj.image:
             request = self.context.get('request')
             return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+        if obj.image_media_asset:
+            if obj.image_media_asset.image:
+                request = self.context.get('request')
+                return request.build_absolute_uri(obj.image_media_asset.image.url) if request else obj.image_media_asset.image.url
+            if obj.image_media_asset.image_url:
+                return obj.image_media_asset.image_url
+        if obj.card_media_asset:
+            if obj.card_media_asset.image:
+                request = self.context.get('request')
+                return request.build_absolute_uri(obj.card_media_asset.image.url) if request else obj.card_media_asset.image.url
+            if obj.card_media_asset.image_url:
+                return obj.card_media_asset.image_url
         if obj.card_image_url:
             return obj.card_image_url
         return None
 
     def get_heroImg(self, obj):
+        if obj.hero_media_asset:
+            if obj.hero_media_asset.image:
+                request = self.context.get('request')
+                return request.build_absolute_uri(obj.hero_media_asset.image.url) if request else obj.hero_media_asset.image.url
+            if obj.hero_media_asset.image_url:
+                return obj.hero_media_asset.image_url
         if obj.hero_image_url:
             return obj.hero_image_url
         return self.get_img(obj)
@@ -98,6 +116,16 @@ class PackageSerializer(serializers.ModelSerializer):
     def get_gallery(self, obj):
         if obj.gallery_urls:
             return obj.gallery_urls
+        if obj.gallery_assets.exists():
+            images = []
+            request = self.context.get('request')
+            for asset in obj.gallery_assets.all():
+                if asset.image:
+                    images.append(request.build_absolute_uri(asset.image.url) if request else asset.image.url)
+                elif asset.image_url:
+                    images.append(asset.image_url)
+            if images:
+                return images
         images = []
         request = self.context.get('request')
         for item in obj.gallery.all():
@@ -107,7 +135,9 @@ class PackageSerializer(serializers.ModelSerializer):
 
 
 class PackageViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Package.objects.prefetch_related('destinations', 'gallery').select_related('category').all()
+    queryset = Package.objects.prefetch_related('destinations', 'gallery', 'gallery_assets').select_related(
+        'category', 'image_media_asset', 'hero_media_asset', 'card_media_asset'
+    ).all()
     serializer_class = PackageSerializer
     lookup_field = 'slug'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
