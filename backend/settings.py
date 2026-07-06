@@ -2,10 +2,12 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
+import environ
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+env = environ.Env()
 
 
 def env_bool(name, default=False):
@@ -16,7 +18,7 @@ def env_bool(name, default=False):
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-your-secret-key-here')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if host.strip()]
 
 INSTALLED_APPS = [
     'jazzmin',
@@ -54,6 +56,7 @@ JAZZMIN_SETTINGS = {
 }
 
 MIDDLEWARE = [
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -85,21 +88,28 @@ TEMPLATES = [
 WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database - PostgreSQL
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'rooted_kenya_db'),
-        'USER': os.getenv('DB_USER', 'rooted_user'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'your_secure_password'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '5432'),
-        'OPTIONS': {
-            'options': '-c search_path=public',
-            'connect_timeout': 10,
-        },
-        'CONN_MAX_AGE': 600,  # Connection persistence
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL:
+    DATABASES = {
+        'default': env.db('DATABASE_URL'),
     }
-}
+    DATABASES['default']['CONN_MAX_AGE'] = 600
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'rooted_kenya_db'),
+            'USER': os.getenv('DB_USER', 'rooted_user'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'your_secure_password'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+            'OPTIONS': {
+                'options': '-c search_path=public',
+                'connect_timeout': 10,
+            },
+            'CONN_MAX_AGE': 600,  # Connection persistence
+        }
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -116,10 +126,11 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media storage
 # Local by default; set USE_S3_MEDIA=True in production to store uploads in S3-compatible storage.
@@ -161,10 +172,11 @@ if USE_S3_MEDIA:
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+frontend_origins = os.getenv(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:3000,http://127.0.0.1:3000',
+)
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in frontend_origins.split(',') if origin.strip()]
 CORS_ALLOW_CREDENTIALS = True
 
 # REST Framework settings
